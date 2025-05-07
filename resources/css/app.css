@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.bg-success {
+    background-color: #28a745 !important;
+    color: white;
+}
