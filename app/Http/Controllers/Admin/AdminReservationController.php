@@ -19,7 +19,7 @@ class AdminReservationController extends Controller
 
     public function create()
     {
-        $rooms = Room::all();
+        $rooms = Room::where('is_available', true)->get();
         $guests = User::all();
         return view('admin.reserve.create', compact('rooms', 'guests'));
     }
@@ -27,26 +27,36 @@ class AdminReservationController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'room_id' => 'required|exists:rooms,id',
-            'user_id' => 'required|exists:users,id',
-            'check_in' => ['required', 'date', 'after_or_equal:today'],
+            'room_id'   => 'required|exists:rooms,id',
+            'user_id'   => 'required|exists:users,id',
+            'check_in'  => ['required', 'date', 'after_or_equal:today'],
             'check_out' => ['required', 'date', 'after:check_in'],
         ]);
 
         $checkIn = Carbon::parse($request->check_in);
         $checkOut = Carbon::parse($request->check_out);
-        $nights = $checkOut->diffInDays($checkIn);
+        $today = Carbon::today();
+
+        if ($checkIn->lt($today) || $checkOut->lt($today)) {
+            return back()->withErrors(['check_in' => 'Dates cannot be in the past.']);
+        }
 
         $room = Room::findOrFail($request->room_id);
+
+        if ($this->hasDateConflict($room->id, $checkIn->copy(), $checkOut->copy())) {
+            return back()->withErrors(['room_id' => 'Room is already booked for the selected dates.']);
+        }
+
+        $nights = $checkOut->diffInDays($checkIn);
         $totalPrice = $room->price_per_night * $nights;
 
-        $reservation = Reservation::create([
-            'room_id' => $room->id,
-            'user_id' => $request->user_id,
-            'check_in' => $checkIn,
-            'check_out' => $checkOut,
+        Reservation::create([
+            'room_id'     => $room->id,
+            'user_id'     => $request->user_id,
+            'check_in'    => $checkIn,
+            'check_out'   => $checkOut,
             'total_price' => $totalPrice,
-            'status' => 'pending', 
+            'status'      => 'pending',
         ]);
 
         $room->update(['is_available' => false]);
@@ -65,28 +75,43 @@ class AdminReservationController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'room_id' => 'required|exists:rooms,id',
-            'user_id' => 'required|exists:users,id',
-            'check_in' => ['required', 'date', 'after_or_equal:today'],
+            'room_id'   => 'required|exists:rooms,id',
+            'user_id'   => 'required|exists:users,id',
+            'check_in'  => ['required', 'date', 'after_or_equal:today'],
             'check_out' => ['required', 'date', 'after:check_in'],
         ]);
 
-        $reservation = Reservation::findOrFail($id);
-
         $checkIn = Carbon::parse($request->check_in);
         $checkOut = Carbon::parse($request->check_out);
-        $nights = $checkOut->diffInDays($checkIn);
+        $today = Carbon::today();
 
-        $room = Room::findOrFail($request->room_id);
-        $totalPrice = $room->price_per_night * $nights;
+        if ($checkIn->lt($today) || $checkOut->lt($today)) {
+            return back()->withErrors(['check_in' => 'Reservation dates cannot be in the past.']);
+        }
+
+        $reservation = Reservation::findOrFail($id);
+        $oldRoomId = $reservation->room_id;
+        $newRoom = Room::findOrFail($request->room_id);
+
+        if ($this->hasDateConflict($newRoom->id, $checkIn->copy(), $checkOut->copy(), $reservation->id)) {
+            return back()->withErrors(['room_id' => 'Room is already booked for the selected dates.']);
+        }
+
+        $nights = $checkOut->diffInDays($checkIn);
+        $totalPrice = $newRoom->price_per_night * $nights;
 
         $reservation->update([
-            'room_id' => $room->id,
-            'user_id' => $request->user_id,
-            'check_in' => $checkIn,
-            'check_out' => $checkOut,
+            'room_id'     => $newRoom->id,
+            'user_id'     => $request->user_id,
+            'check_in'    => $checkIn,
+            'check_out'   => $checkOut,
             'total_price' => $totalPrice,
         ]);
+
+        if ($oldRoomId !== $newRoom->id) {
+            Room::find($oldRoomId)?->update(['is_available' => true]);
+            $newRoom->update(['is_available' => false]);
+        }
 
         return redirect()->route('admin.reserve.index')->with('success', 'Reservation updated successfully.');
     }
@@ -98,5 +123,20 @@ class AdminReservationController extends Controller
         $reservation->delete();
 
         return redirect()->route('admin.reserve.index')->with('success', 'Reservation deleted successfully.');
+    }
+
+    private function hasDateConflict($roomId, $checkIn, $checkOut, $excludeReservationId = null)
+    {
+        $query = Reservation::where('room_id', $roomId)
+            ->where(function ($q) use ($checkIn, $checkOut) {
+                $q->whereBetween('check_in', [$checkIn, $checkOut->copy()->subDay()])
+                  ->orWhereBetween('check_out', [$checkIn->copy()->addDay(), $checkOut]);
+            });
+
+        if ($excludeReservationId) {
+            $query->where('id', '!=', $excludeReservationId);
+        }
+
+        return $query->exists();
     }
 }

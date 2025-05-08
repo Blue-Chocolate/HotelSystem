@@ -12,18 +12,14 @@ use App\Http\Controllers\GuestController\ReservationController;
 use App\Http\Controllers\ProfileController;
 Route::get('ping', fn() => response()->json(['pong'=>true]));
 
-// Load Breeze auth routes
 require __DIR__.'/auth.php';
 
-// Public home/guest redirect
 Route::get('/', fn() => redirect()->route('login'))->middleware('guest');
 
-// Admin panel (Blade) — CSRF-protected, browser sessions
 Route::prefix('admin')->middleware(['auth','role:admin'])->name('admin.')->group(function(){
     Route::get('dashboard', [AdminDashboardController::class,'index'])->name('dashboard');
     Route::get('welcome',   [AdminDashboardController::class,'welcome'])->name('welcome');
 
-    // Reservations
     Route::get('reserve',                 [AdminReservationController::class,'index'])->name('reserve.index');
     Route::get('reserve/create',          [AdminReservationController::class,'create'])->name('reserve.create');
     Route::post('reserve',                [AdminReservationController::class,'store'])->name('reserve.store');
@@ -31,7 +27,6 @@ Route::prefix('admin')->middleware(['auth','role:admin'])->name('admin.')->group
     Route::put('reserve/{reservation}',   [AdminReservationController::class,'update'])->name('reserve.update');
     Route::delete('reserve/{reservation}',[AdminReservationController::class,'destroy'])->name('reserve.destroy');
 
-    // Other admin
     Route::get('guests',  [AdminGuestController::class,'index'])->name('guests.index');
     Route::get('rooms',   [AdminRoomController::class,'index'])->name('rooms.index');
     Route::get('revenue', [AdminRevenueController::class,'index'])->name('revenue.index');
@@ -45,14 +40,10 @@ Route::middleware('auth')->group(function(){
     Route::delete('profile',[ProfileController::class,'destroy'])->name('profile.destroy');
 
     // Guest booking
-    Route::get('home', function() {
-        if (!auth()->check()) {
-            return redirect()->route('login');
-        }
-        return auth()->user()->hasRole('admin') 
-            ? redirect()->route('admin.dashboard')
-            : redirect()->route('rooms.index');
-    })->name('home');
+    Route::get('home', fn() => Auth::user()->hasRole('admin')
+        ? redirect()->route('admin.dashboard')
+        : redirect()->route('rooms.index')
+    )->name('home');
 
     Route::get('rooms',              [RoomController::class,'index'])->name('rooms.index');
     Route::get('rooms/{room}',       [RoomController::class,'show'])->name('rooms.show');
@@ -61,4 +52,4 @@ Route::middleware('auth')->group(function(){
     Route::get('my-reservations',    [ReservationController::class,'myReservations'])->name('booking.my-reservations');
     Route::delete('reservations/{reservation}/cancel',
                                       [ReservationController::class,'cancel'])->name('booking.cancel');
-});
+}); 
