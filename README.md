@@ -86,4 +86,4 @@ The Hotel Management System is a comprehensive solution designed to streamline h
 - PHP >= 8.1
 - MySQL >= 8.0
 - Composer
-- Node.js & NPM
+- NPM
