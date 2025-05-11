@@ -16,6 +16,12 @@ require __DIR__.'/auth.php';
 
 Route::get('/', fn() => redirect()->route('login'))->middleware('guest');
 
+// Guest Routes
+Route::name('guest.')->group(function() {
+    Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
+    Route::get('/rooms/{room}', [RoomController::class, 'show'])->name('rooms.show');
+});
+
 Route::prefix('admin')->middleware(['auth','role:admin'])->name('admin.')->group(function(){
     Route::get('dashboard', [AdminDashboardController::class,'index'])->name('dashboard');
     Route::get('welcome',   [AdminDashboardController::class,'welcome'])->name('welcome');
@@ -30,6 +36,13 @@ Route::prefix('admin')->middleware(['auth','role:admin'])->name('admin.')->group
     Route::get('guests',  [AdminGuestController::class,'index'])->name('guests.index');
     Route::get('rooms',   [AdminRoomController::class,'index'])->name('rooms.index');
     Route::get('revenue', [AdminRevenueController::class,'index'])->name('revenue.index');
+    Route::resource('admin/rooms', AdminRoomController::class);
+    Route::get('rooms/{room}/edit', [AdminRoomController::class,'edit'])->name('rooms.edit');
+    Route::put('rooms/{room}', [AdminRoomController::class,'update'])->name('rooms.update');
+    Route::delete('rooms/{room}', [AdminRoomController::class,'destroy'])->name('rooms.destroy');
+    Route::get('rooms/create', [AdminRoomController::class,'create'])->name('rooms.create');
+    Route::post('rooms', [AdminRoomController::class,'store'])->name('rooms.store');
+
 });
 
 // Authenticated user (Blade)
@@ -52,4 +65,5 @@ Route::middleware('auth')->group(function(){
     Route::get('my-reservations',    [ReservationController::class,'myReservations'])->name('booking.my-reservations');
     Route::delete('reservations/{reservation}/cancel',
                                       [ReservationController::class,'cancel'])->name('booking.cancel');
-}); 
+});
+Route::get('/rooms/{room}/calendar', [\App\Http\Controllers\GuestController\ReservationController::class, 'calendarData'])->name('rooms.calendar');

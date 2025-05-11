@@ -7,10 +7,46 @@
 
     {{-- Bootstrap CSS CDN --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css" rel="stylesheet">
+
+    {{-- Custom styles to match guest layout --}}
+    <style>
+        body {
+            background-color: rgb(243 244 246);
+        }
+        .navbar {
+            background-color:        #3498db;
+            ;
+        }
+        .container {
+            background-color: white;
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        .nav-link {
+            color: white;
+            transition: color 0.2s;
+        }
+        .nav-link:hover {
+            color: rgb(209 213 219) !important;
+        }
+        .navbar-brand {
+            color: rgb(209 213 219) !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: rgb(17 24 39);
+                color: rgb(243 244 246);
+            }
+            .container {
+                background-color: rgb(31 41 55);
+            }
+        }
+    </style>
 </head>
 <body>
     {{-- Navbar --}}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ route('admin.dashboard') }}">Hotel Admin</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -32,7 +68,7 @@
     </nav>
 
     {{-- Main Content --}}
-    <div class="container py-4">
+    <div class="container py-4 mt-4">
         @yield('content')
     </div>
 
@@ -43,5 +79,7 @@
 
     {{-- Bootstrap JS CDN --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js"></script>
+
 </body>
 </html>

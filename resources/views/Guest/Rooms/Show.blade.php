@@ -9,9 +9,14 @@
         <p><strong>Price per night:</strong> ${{ $room->price_per_night }}</p>
 
         <!-- Availability check -->
-        @if($room->reservations()->where('check_out', '>=', now())->exists())
-            <p class="text-warning">This room is not available for booking during selected dates.</p>
-        @else
+        @php
+            $isAvailable = !$room->reservations()->where(function($query) {
+                $query->where('check_in', '<', now())
+                      ->where('check_out', '>', now());
+            })->exists();
+        @endphp
+
+        @if($isAvailable)
             <form method="POST" action="{{ route('booking.store', $room) }}">
                 @csrf
 
@@ -27,7 +32,33 @@
 
                 <button type="submit" class="btn btn-primary mt-2">Confirm Booking</button>
             </form>
+        @else
+            <p class="text-warning">This room is not available for booking during selected dates.</p>
         @endif
     </div>
 </div>
+
+<!-- Calendar -->
+<div id='calendar'></div>
+
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let calendarEl = document.getElementById('calendar');
+
+    let calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: "{{ route('rooms.calendar', $room->id) }}",
+        height: 'auto',
+        dateClick: function(info) {
+            console.log(info.dateStr);
+        }
+    });
+
+    calendar.render();
+});
+</script>
+
 @endsection

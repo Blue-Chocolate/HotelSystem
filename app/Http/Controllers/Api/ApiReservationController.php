@@ -15,9 +15,8 @@ class ApiReservationController extends Controller
      */
     public function index(Request $request)
     {
-        // You can restrict to the user’s own reservations if you like:
-        // $reservations = Reservation::where('user_id', $request->user()->id)->get();
-        $reservations = Reservation::with(['room', 'user'])->get();
+        // Only show user's own reservations
+        $reservations = $request->user()->reservations()->with('room')->get();
         return response()->json($reservations);
     }
 
@@ -33,30 +32,40 @@ class ApiReservationController extends Controller
             'check_out' => ['required','date','after:check_in'],
         ]);
 
-        // 2) Parse dates & compute nights
+        // 2) Parse dates
         $checkIn  = Carbon::parse($data['check_in']);
         $checkOut = Carbon::parse($data['check_out']);
-        $nights   = $checkOut->diffInDays($checkIn);
+        
+        // 3) Lookup room
+        $room = Room::findOrFail($data['room_id']);
+        
+        // 4) Check if room is available for these dates
+        if (!$room->isAvailableForDates($checkIn, $checkOut)) {
+            return response()->json([
+                'message' => 'Room is not available for the selected dates',
+                'errors' => ['dates' => ['The room is already booked for these dates']]
+            ], 422);
+        }
 
-        // 3) Lookup room & compute price
-        $room       = Room::findOrFail($data['room_id']);
+        // 5) Calculate total price
+        $nights = $checkOut->diffInDays($checkIn);
         $totalPrice = $room->price_per_night * $nights;
 
-        // 4) Create reservation tied to the authenticated user
+        // 6) Create reservation
         $reservation = Reservation::create([
             'room_id'     => $room->id,
             'user_id'     => $request->user()->id,
             'check_in'    => $checkIn,
             'check_out'   => $checkOut,
             'total_price' => $totalPrice,
-            'status'      => 'reserved',
+            'status'      => 'confirmed',
         ]);
 
-        // 5) Mark room unavailable
-        $room->update(['is_available' => false]);
-
-        // 6) Return the created model (201 status)
-        return response()->json($reservation, 201);
+        // 7) Return the created reservation
+        return response()->json([
+            'message' => 'Reservation created successfully',
+            'reservation' => $reservation->load('room')
+        ], 201);
     }
 
     /**
@@ -64,29 +73,45 @@ class ApiReservationController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // 1) Find reservation and check ownership
         $reservation = Reservation::findOrFail($id);
+        if ($reservation->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
+        // 2) Validate input
         $data = $request->validate([
-            'room_id'   => 'required|exists:rooms,id',
             'check_in'  => ['required','date','after_or_equal:today'],
             'check_out' => ['required','date','after:check_in'],
         ]);
 
+        // 3) Parse dates
         $checkIn  = Carbon::parse($data['check_in']);
         $checkOut = Carbon::parse($data['check_out']);
-        $nights   = $checkOut->diffInDays($checkIn);
 
-        $room       = Room::findOrFail($data['room_id']);
-        $totalPrice = $room->price_per_night * $nights;
+        // 4) Check if room is available for new dates (excluding current reservation)
+        if (!$reservation->room->isAvailableForDates($checkIn, $checkOut, $reservation->id)) {
+            return response()->json([
+                'message' => 'Room is not available for the selected dates',
+                'errors' => ['dates' => ['The room is already booked for these dates']]
+            ], 422);
+        }
 
+        // 5) Calculate new total price
+        $nights = $checkOut->diffInDays($checkIn);
+        $totalPrice = $reservation->room->price_per_night * $nights;
+
+        // 6) Update reservation
         $reservation->update([
-            'room_id'     => $room->id,
             'check_in'    => $checkIn,
             'check_out'   => $checkOut,
             'total_price' => $totalPrice,
         ]);
 
-        return response()->json($reservation);
+        return response()->json([
+            'message' => 'Reservation updated successfully',
+            'reservation' => $reservation->load('room')
+        ]);
     }
 
     /**
@@ -94,10 +119,13 @@ class ApiReservationController extends Controller
      */
     public function destroy($id)
     {
+        // Find reservation and check ownership
         $reservation = Reservation::findOrFail($id);
-        $reservation->room->update(['is_available' => true]);
-        $reservation->delete();
+        if ($reservation->user_id !== request()->user()->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
-        return response()->json(null, 204);
+        $reservation->delete();
+        return response()->json(['message' => 'Reservation cancelled successfully']);
     }
 }

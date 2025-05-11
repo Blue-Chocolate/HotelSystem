@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\GuestController;
+
 use App\Models\Room;
 use App\Models\Reservation;
 use Illuminate\Http\Request;
@@ -9,54 +10,81 @@ use App\Http\Controllers\Controller;
 
 class ReservationController extends Controller
 {
-    // Store a new reservation
     public function store(Request $request, Room $room)
     {
-        $request->validate([
-            'check_in' => 'required|date|after_or_equal:today',
+        $validated = $request->validate([
+            'check_in'  => 'required|date|after_or_equal:today',
             'check_out' => 'required|date|after:check_in',
         ]);
 
-        // Check if the room is already reserved for the selected dates
-        $existingReservation = $room->reservations()->where(function ($query) use ($request) {
-            $query->where('check_in', '<', $request->check_out)
-                ->where('check_out', '>', $request->check_in);
-        })->exists();
+        $checkIn = $request->check_in;
+        $checkOut = $request->check_out;
+
+    $existingReservation = $room->reservations()->where(function ($query) use ($checkIn, $checkOut) {
+        $query->where('status', '!=', 'cancelled') 
+              ->where(function ($query) use ($checkIn, $checkOut) {
+                  $query->where('check_in', '<', $checkOut)
+                        ->where('check_out', '>', $checkIn);
+              });
+    })->exists();
 
         if ($existingReservation) {
-            return back()->withErrors(['error' => 'This room is already booked for the selected dates.']);
+            return back()->withErrors([
+                'error' => "Room is already booked between <strong>{$checkIn}</strong> and <strong>{$checkOut}</strong>. Please choose different dates."
+            ])->withInput();
         }
 
         // Create the reservation
-        $reservation = Reservation::create([
-            'user_id' => Auth::id(),
-            'room_id' => $room->id,
-            'check_in' => $request->check_in,
-            'check_out' => $request->check_out,
-            'status' => 'pending',
+        Reservation::create([
+            'user_id'    => Auth::id(),
+            'room_id'    => $room->id,
+            'check_in'   => $checkIn,
+            'check_out'  => $checkOut,
+            'status'     => 'pending',
         ]);
 
         return redirect()->route('booking.my-reservations')->with('success', 'Your booking has been successfully created!');
     }
-    public function cancel($id)
-{
-    $reservation = Reservation::findOrFail($id);
 
-    // Ensure that the reservation belongs to the current user
-    if ($reservation->user_id !== Auth::id()) {
-        return abort(403);
+    public function cancel($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        if ($reservation->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $reservation->update(['status' => 'cancelled']);
+
+        return redirect()->route('booking.my-reservations')->with('success', 'Reservation has been cancelled.');
     }
 
-    // Mark the reservation as cancelled
-    $reservation->update(['status' => 'cancelled']);
-
-    return redirect()->route('booking.my-reservations')->with('success', 'Reservation has been cancelled.');
-}
-public function myReservations()
+    public function myReservations()
+    {
+        $reservations = Auth::user()->reservations()->with('room')->latest()->get();
+        return view('guest.booking.my-reservations', compact('reservations'));
+    }
+public function calendarData($roomId)
 {
-    $reservations = Auth::user()->reservations()->with('room')->latest()->get();
+    $room = Room::findOrFail($roomId);
+    
+    $reservations = $room->reservations()
+        ->where('status', '!=', 'cancelled')
+        ->get(['check_in', 'check_out']);
 
-    return view('guest.booking.my-reservations', compact('reservations'));
+    $events = [];
+
+    foreach ($reservations as $res) {
+        $events[] = [
+            'title' => 'Booked',
+            'start' => $res->check_in->toDateString(),
+            'end' => $res->check_out->toDateString(),
+            'color' => '#ff0000', 
+        ];
+    }
+
+    return response()->json($events);
 }
+
 
 }

@@ -19,7 +19,7 @@ class AdminReservationController extends Controller
 
     public function create()
     {
-        $rooms = Room::where('is_available', true)->get();
+        $rooms = Room::all();
         $guests = User::all();
         return view('admin.reserve.create', compact('rooms', 'guests'));
     }
@@ -43,7 +43,7 @@ class AdminReservationController extends Controller
 
         $room = Room::findOrFail($request->room_id);
 
-        if ($this->hasDateConflict($room->id, $checkIn->copy(), $checkOut->copy())) {
+        if (!$room->isAvailableForDates($checkIn, $checkOut)) {
             return back()->withErrors(['room_id' => 'Room is already booked for the selected dates.']);
         }
 
@@ -58,8 +58,6 @@ class AdminReservationController extends Controller
             'total_price' => $totalPrice,
             'status'      => 'pending',
         ]);
-
-        $room->update(['is_available' => false]);
 
         return redirect()->route('admin.reserve.index')->with('success', 'Reservation created successfully.');
     }
@@ -90,10 +88,9 @@ class AdminReservationController extends Controller
         }
 
         $reservation = Reservation::findOrFail($id);
-        $oldRoomId = $reservation->room_id;
         $newRoom = Room::findOrFail($request->room_id);
 
-        if ($this->hasDateConflict($newRoom->id, $checkIn->copy(), $checkOut->copy(), $reservation->id)) {
+        if (!$newRoom->isAvailableForDates($checkIn, $checkOut, $reservation->id)) {
             return back()->withErrors(['room_id' => 'Room is already booked for the selected dates.']);
         }
 
@@ -108,35 +105,14 @@ class AdminReservationController extends Controller
             'total_price' => $totalPrice,
         ]);
 
-        if ($oldRoomId !== $newRoom->id) {
-            Room::find($oldRoomId)?->update(['is_available' => true]);
-            $newRoom->update(['is_available' => false]);
-        }
-
         return redirect()->route('admin.reserve.index')->with('success', 'Reservation updated successfully.');
     }
 
     public function destroy($id)
     {
         $reservation = Reservation::findOrFail($id);
-        $reservation->room->update(['is_available' => true]);
         $reservation->delete();
 
         return redirect()->route('admin.reserve.index')->with('success', 'Reservation deleted successfully.');
-    }
-
-    private function hasDateConflict($roomId, $checkIn, $checkOut, $excludeReservationId = null)
-    {
-        $query = Reservation::where('room_id', $roomId)
-            ->where(function ($q) use ($checkIn, $checkOut) {
-                $q->whereBetween('check_in', [$checkIn, $checkOut->copy()->subDay()])
-                  ->orWhereBetween('check_out', [$checkIn->copy()->addDay(), $checkOut]);
-            });
-
-        if ($excludeReservationId) {
-            $query->where('id', '!=', $excludeReservationId);
-        }
-
-        return $query->exists();
     }
 }

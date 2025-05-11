@@ -1,141 +1,101 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Hotel System Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    :root {
-      --primary-brown: #8B4513;
-      --light-bg: #f9f6f2;
-      --light-text: #333;
-      --dark-bg: #2e2b29;
-      --dark-text: #f5f5f5;
-      --card-bg-light: #fff;
-      --card-bg-dark: #3b3531;
-    }
+@extends('layouts.admin')
 
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      transition: background-color 0.3s, color 0.3s;
-    }
+@section('title', 'Admin Dashboard')
 
-    .light-mode {
-      background-color: var(--light-bg);
-      color: var(--light-text);
-    }
-
-    .dark-mode {
-      background-color: var(--dark-bg);
-      color: var(--dark-text);
-    }
-
-    header {
-      background-color: var(--primary-brown);
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
+@section('content')
+<style>
     .dashboard {
-      padding: 2rem;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
     }
 
     .card {
-      background-color: var(--card-bg-light);
-      padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      transition: background-color 0.3s;
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(32, 40, 179, 0.1);
+        transition: all 0.3s ease;
     }
+
     .card-link {
-  text-decoration: none;
-  color: inherit;
-}
-.card-link:hover .card {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-    .dark-mode .card {
-      background-color: var(--card-bg-dark);
+        text-decoration: none;
+        color: inherit;
     }
 
-    .toggle-btn {
-      background-color: white;
-      border: none;
-      color: var(--primary-brown);
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
+    .card-link:hover .card {
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
     }
 
-    .toggle-btn:hover {
-      background-color: #f2e6dd;
+    .card h2 {
+        margin: 0 0 1rem 0;
+        color: #2c3e50;
     }
 
-    h2 {
-      margin: 0 0 1rem 0;
+    .btn-new-reservation {
+        display: inline-block;
+        margin-top: 2rem;
+        background-color: #3498db;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: background-color 0.3s;
     }
-  </style>
-</head>
-<body class="light-mode">
-  <header>
-    <h1>Hotel Dashboard</h1>
-    <button class="toggle-btn" onclick="toggleMode()">Switch Theme</button>
-  </header>
 
-  <main class="dashboard">
+    .btn-new-reservation:hover {
+        background-color: #2c3e50;
+        color: white;
+        text-decoration: none;
+    }
 
-<a href="{{ route('admin.reserve.index') }}" class="card-link">
-  <div class="card">
-    <h2>Reservations</h2>
-    <p>{{ $reservationCount }} total bookings</p>
-  </div>
-</a>
+    @media (prefers-color-scheme: dark) {
+        .card {
+            background-color: rgb(31 41 55);
+            color: rgb(243 244 246);
+        }
+        
+        .card h2 {
+            color: #3498db;
+        }
+    }
+</style>
 
-<a href="{{ route('admin.guests.index') }}" class="card-link">
-  <div class="card">
-    <h2>Guests</h2>
-    <p>{{ $guestCount }} total guests</p>
-  </div>
-</a>
+<div class="dashboard">
+    <a href="{{ route('admin.reserve.index') }}" class="card-link">
+        <div class="card">
+            <h2>Reservations</h2>
+            <p>{{ $reservationCount }} total bookings</p>
+        </div>
+    </a>
 
-<a href="{{ route('admin.rooms.index') }}" class="card-link">
-  <div class="card">
-    <h2>Rooms Available</h2>
-    <p>{{ $availableRooms }} rooms available</p>
-  </div>
-</a>
+    <a href="{{ route('admin.guests.index') }}" class="card-link">
+        <div class="card">
+            <h2>Guests</h2>
+            <p>{{ $guestCount }} total guests</p>
+        </div>
+    </a>
 
-<a href="{{ route('admin.revenue.index') }}" class="card-link">
-  <div class="card">
-    <h2>Revenue</h2>
-    <p>${{ number_format($revenue, 2) }} revenue</p>
-  </div>
-</a>
+    <a href="{{ route('admin.rooms.index') }}" class="card-link">
+        <div class="card">
+            <h2>Rooms Available</h2>
+            <p>{{ $availableRooms }} rooms available</p>
+        </div>
+    </a>
 
-</main>
-
-  <div style="grid-column: span 2;">
-  <a href="{{ route('admin.reserve.create') }}" class="toggle-btn" style="display: inline-block; margin-top: 2rem;">
-    + Make Reservation for Guest
-  </a>
+    <a href="{{ route('admin.revenue.index') }}" class="card-link">
+        <div class="card">
+            <h2>Revenue</h2>
+            <p>${{ number_format($revenue, 2) }} revenue</p>
+        </div>
+    </a>
 </div>
 
-  <script>
-    function toggleMode() {
-      const body = document.body;
-      body.classList.toggle('dark-mode');
-      body.classList.toggle('light-mode');
-    }
-  </script>
-</body>
-</html>
+<div>
+    <a href="{{ route('admin.reserve.create') }}" class="btn-new-reservation">
+        + Make Reservation for Guest
+    </a>
+</div>
+@endsection

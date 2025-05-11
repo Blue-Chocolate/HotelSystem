@@ -1,7 +1,91 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Existing styles */
 .bg-success {
     background-color: #28a745 !important;
     color: white;
+}
+
+/* Layout Color Enhancements */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --background-light: #f8f9fa;
+    --text-dark: #2c3e50;
+    --text-light: #ecf0f1;
+}
+
+body {
+    background-color: var(--background-light);
+    color: var(--text-dark);
+}
+
+/* Navigation styling */
+nav {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+/* Links styling */
+a {
+    color: var(--secondary-color);
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: var(--accent-color);
+}
+
+/* Card and container styling */
+.card, .container {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Button styling */
+.button, button {
+    background-color: var(--secondary-color);
+    color: var(--text-light);
+    transition: all 0.3s ease;
+}
+
+.button:hover, button:hover {
+    background-color: var(--accent-color);
+}
+
+/* Form elements */
+input, select, textarea {
+    border-color: var(--primary-color);
+    background-color: white;
+}
+
+/* Table styling */
+table {
+    background-color: white;
+}
+
+thead {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+footer {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.alert {
+    border-left: 4px solid var(--accent-color);
+}
+
+.section-alt {
+    background-color: var(--background-light);
+}
+
+header {
+    background-color: var(--primary-color);
+    color: var(--text-light);
 }

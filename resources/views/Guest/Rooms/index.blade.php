@@ -3,6 +3,20 @@
 @section('content')
 <div class="container">
     <h2 class="mb-4">Available Rooms</h2>
+
+    <!-- Room Type Filter Form -->
+    <div class="mb-4">
+        <form action="{{ route('rooms.index') }}" method="GET" class="d-flex gap-2">
+            <select name="type" class="form-select" style="max-width: 200px;">
+                <option value="">All Types</option>
+                <option value="Single" {{ request('type') == 'Single' ? 'selected' : '' }}>Single</option>
+                <option value="Double" {{ request('type') == 'Double' ? 'selected' : '' }}>Double</option>
+                <option value="Suite" {{ request('type') == 'Suite' ? 'selected' : '' }}>Suite</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
+    </div>
+
     <div class="row">
         @foreach($rooms as $room)
         <div class="col-md-4 mb-4">

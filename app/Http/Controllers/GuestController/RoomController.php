@@ -8,14 +8,35 @@ use App\Http\Controllers\Controller;
 
 class RoomController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $rooms = Room::where('is_available', true)->get();
+        $query = Room::where('is_available', true);
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $rooms = $query->get();
         return view('guest.rooms.index', compact('rooms'));
     }
 
-    public function show(Room $room)
-    {
-        return view('guest.rooms.show', compact('room'));
-    }
+   public function show(Room $room)
+{
+    $reservations = $room->reservations()->get();
+
+    $events = $reservations->map(function ($reservation) {
+        return [
+            'title' => 'Reserved',
+            'start' => $reservation->check_in->format('Y-m-d'),
+            'end'   => $reservation->check_out->copy()->addDay()->format('Y-m-d'), 
+            'color' => 'red'
+        ];
+    });
+
+    return view('guest.rooms.show', [
+        'room' => $room,
+        'events' => $events
+    ]);
+}
+    
 }
